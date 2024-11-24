@@ -5,7 +5,7 @@ from telebot import types
 users_feature = []
 users_list = []
 game_started = False
-ver = '3.9'
+ver = '3.10'
 
 # Токен
 token='8144689811:AAHnhzpXuNLs_ZrNlohCMI1ukPTVD2AOYiY'
@@ -63,6 +63,41 @@ def lobby(message):
 @bot.callback_query_handler(func=lambda call: call.data == "new_player")
 def on_new_player(call):
     add_participant(call.message)
+
+# Обработка нажатия на кнопку "Начать"
+@bot.callback_query_handler(func=lambda call: call.data == "game")
+def start_game(call):
+    global game_started
+    game_started = True
+    current_round = 0
+    total_rounds = len(users_list)  # Количество раундов равно количеству участников
+
+    bot.send_message(call.message.chat.id, f"Игра начата! Всего раундов: {total_rounds}.")
+    game(call, current_round)
+
+def game(call, current_round):
+    for i in range(len(users_list)):
+        markup = types.InlineKeyboardMarkup()
+        if current_round < len(users_list):
+            name = users_list[current_round]
+            feature = users_feature[current_round]
+            bot.send_message(call.message.chat.id, f"Раунд {current_round + 1}")
+            bot.send_message(call.message.chat.id, f"Кто это, если его особенность: {users_feature[current_round]} ?")
+
+            msg = bot.send_message(call.message.chat.id, f"{name}, ваш ответ:")
+            bot.register_next_step_handler(msg, lambda m: check_answer(m, name, current_round))
+        else:
+            bot.send_message(call.message.chat.id, "Игра завершена!")
+
+def check_answer(message, correct_name, current_round):
+    answer = message.text.strip().lower()
+
+    if answer == correct_name.lower():
+        bot.send_message(message.chat.id, "Правильно! Вы угадали!")
+    else:
+        bot.send_message(message.chat.id, f"Неправильно. Это был {correct_name}.")
+    
+    game(message, current_round + 1)
 
 # Запуск
 bot.infinity_polling()
